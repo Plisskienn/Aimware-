@@ -1,0 +1,410 @@
+-- stuff
+local draw_Line, draw_TextShadow, draw_Color, draw_Text, client_WorldToScreen, draw_GetScreenSize, client_GetConVar, client_SetConVar, client_exec, PlayerIndexByUserID
+= draw.Line, draw.TextShadow, draw.Color, draw.Text, client.WorldToScreen, draw.GetScreenSize, client.GetConVar, client.SetConVar, client.Command, client.GetPlayerIndexByUserID
+-------------- References
+local V_RefM = gui.Reference("VISUALS", "Main")
+local G_VM = gui.Groupbox(V_RefM, "Extra Features", 0, 1457, 200, 173)
+local VOO_Ref = gui.Reference("VISUALS", "OTHER", "Options")
+local VEO_Ref = gui.Reference("VISUALS", "ENEMIES", "Options")
+local VEF_Ref = gui.Reference("VISUALS", "ENEMIES", "Filter")
+local VTO_Ref = gui.Reference("VISUALS", "TEAMMATES", "Options")
+local M_Ref1 = gui.Reference("MISC", "Part 1")
+local G_M1 = gui.Groupbox(M_Ref1, "Extra Features", 0, 615, 200, 271)
+-------------- Better Grenades
+local better_grenades = gui.Checkbox(VOO_Ref, "esp_other_better_grenades", "Better Grenades", false)
+-------------- Hit Log 
+local HitLog = gui.Checkbox(G_M1, "msc_hitlog", "Hit Log", false)
+-------------- Auto Buy Window
+local show = false;
+local AB_Show = gui.Checkbox(G_M1, "msc_ab_show", "AutoBuy Menu", false)
+local AB_W = gui.Window("AB_W", "Auto Buy", 200, 200, 200, 352)
+local AB_GB = gui.Groupbox(AB_W, "Auto Buy Settings", 15, 14, 170, 292)
+local AB_E = gui.Checkbox(AB_GB, "AB_Active", "Active", false)
+local AB_Mode = gui.Combobox( AB_GB, 'AB_Mode', "Auto Buy Mode", "Round Based", "Death Based")
+local PrimaryWeapons = gui.Combobox( AB_GB, 'AB_Primary_Weapons', "Primary Weapons", "Off", "AK | M4", "Scout", "AWP", "Auto")
+local SecondaryWeapons = gui.Combobox( AB_GB, 'AB_Secondary_Weapons', "Secondary Weapons", "Off", "Elite", "P250", "Tec-9 | Five-Seven", "R8 | Deagle")
+local Nades = gui.Checkbox(AB_GB, "AB_Nades", "Grenades", false)
+local Zeus = gui.Checkbox(AB_GB, "AB_Zeus", "Zeus", false)
+local Armor = gui.Checkbox(AB_GB, "AB_Armor", "Armor", false)
+local Defuser = gui.Checkbox(AB_GB, "AB_Defuser", "Defuser", false)
+-------------- View Model Extender
+local function VM_Cache() xO = client_GetConVar("viewmodel_offset_x"); yO = client_GetConVar("viewmodel_offset_y"); zO = client_GetConVar("viewmodel_offset_z"); fO = client_GetConVar("viewmodel_fov"); end; VM_Cache()
+local VM_Window = gui.Window("VM_Window", "Viewmodel Extender", 200,200,200,280)
+local VMStuff = gui.Groupbox(VM_Window, "Viewmodel Stuff", 15, 14, 170, 220)
+local ViewModelShown = gui.Checkbox(G_M1, "msc_vme_visible", "Viewmodel Menu", false)
+local xS = gui.Slider(VMStuff, "VM_X", "X", xO, -20, 20)
+local yS = gui.Slider(VMStuff, "VM_Y", "Y", yO, -100, 100)
+local zS = gui.Slider(VMStuff, "VM_Z", "Z", zO, -20, 20)
+local vfov = gui.Slider(VMStuff, "VM_fov", "Viewmodel FOV", fO, 0, 120) 
+-------------- Scoped FOV Fix
+local s_fovfix = gui.Checkbox(G_VM, "vis_fixfov", "Fix Scoped FOV", false)
+local fov_value = gui.GetValue("vis_view_fov")
+local vm_fov_value = gui.GetValue("vis_view_model_fov")
+-------------- Sniper Crosshair
+local s_cross = gui.Checkbox(G_VM, "vis_sniper_crosshair", "Sniper Crosshair", false)
+local OwnCrosshair = gui.Checkbox(G_VM, "vis_sniper_own_crosshair", "Engine Crosshair", false)
+-------------- Knife On Left Hand
+local K_O_L_H = gui.Checkbox(G_M1, "msc_knifelefthand", "Knife On Left Hand", false)
+-------------- Bomb Damage
+local BombTimer = gui.Checkbox(VOO_Ref, "esp_other_better_c4timer", "Bomb Timer", false)
+-------------- Bomb Damage
+local Bomb_Damage = gui.Checkbox(VOO_Ref, "esp_other_bombdamage", "Bomb Damage", false)
+-------------- Clear Chat
+local Clear_Chat = gui.Checkbox( G_M1, "msc_clearchat", "Clear Chat", false)
+local Clear_Chat_spd = gui.Slider(G_M1, "msc_clearchat_speed", "Clear Chat Speed", 22, 1, 100)
+-------------- Aspect Ratio Changer
+local aspect_ratio_table = {};
+local aspect_ratio_check = gui.Checkbox(G_M1, "msc_aspect_enable", "Aspect Ratio Changer", false) 
+local aspect_ratio_reference = gui.Slider(G_M1, "msc_aspect_value", "Force aspect ratio", 100, 1, 199) -- % times your original ratio
+-------------- Esp On Dead
+local espdead = gui.Checkbox(VEF_Ref, "esp_espondead", "ESP when dead", false)
+-------------- Engine Radar
+local ERadar = gui.Checkbox(G_VM, "esp_engine_radar", "Engine Radar", false)
+-------------- Team & Enemy Tracers
+local tracersEnemy = gui.Checkbox(VEO_Ref, "esp_enemy_tracer", "Tracers", false)
+local tracersTeam = gui.Checkbox(VTO_Ref, "esp_team_tracer", "Tracers", false)
+-------------- Team & Enemy & Other Distance + visible help -\- shows "VISIBLE" above enemies head when visible // works with visible only
+local enemy_distance = gui.Checkbox(VEO_Ref, "esp_enemy_distance", "Distance", false)
+local enemy_visiblehelp = gui.Checkbox(VEO_Ref, "esp_enemy_vishelp", "Visible Help", false)
+local team_distance = gui.Checkbox(VTO_Ref, "esp_team_distance", "Distance", false)
+local other_distance = gui.Checkbox(VOO_Ref, "esp_other_distance", "Distance", false)
+-------------- Full Bright
+local fBright = gui.Checkbox(G_VM, "vis_fullbright", "Full Bright", false)
+-------------- Third person on dead
+local thirdpersonondead = gui.Checkbox(G_VM, "vis_thirdperson_ondead", "3rd Person While Dead", false)
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+------------------------- 
+local abs_frame_time = globals.AbsoluteFrameTime;
+local frame_rate = 0.0;
+local get_abs_fps = function()
+    frame_rate = 0.9 * frame_rate + (1.0 - 0.9) * abs_frame_time();
+    return math.floor((1.0 / frame_rate) + 0.5);
+end
+
+local function distance2D(x1, y1, x2, y2) return math.floor(math.sqrt((x2-x1)^2 + (y2-y1)^2) * 0.0833); end
+
+------------------------- Grenade Timers
+local updatetick = 0; local grenades = {};
+function EventHook(Event)
+if Event:GetName() == "round_prestart" then grenades = {}; end
+if Event:GetName() == "hegrenade_detonate" or Event:GetName() == "flashbang_detonate" 
+or Event:GetName() == "inferno_expire" or Event:GetName() == "inferno_extinguish" then updatetick = globals.TickCount(); 
+for index,value in pairs(grenades) do 
+if value[1] == Event:GetInt("entityid") then table.remove(grenades, index); end end end end
+function ESPHook(Builder)
+if better_grenades:GetValue() then
+if Builder:GetEntity():GetClass() == "CBaseCSGrenadeProjectile" then
+local found = false;
+for index,value in pairs(grenades) do
+if value[1] == Builder:GetEntity():GetIndex() then
+DeltaT = (globals.TickCount() - grenades[index][2]) * globals.TickInterval();
+Builder:AddBarBottom(1 - (DeltaT/1.65)); found = true; break; end end
+if found == false and globals.TickCount() > updatetick then
+local gMatrix = {Builder:GetEntity():GetIndex(), globals.TickCount()};
+table.insert(grenades, gMatrix); end end end end
+function DrawingHook()
+local ff = draw.CreateFont("Tahoma"); draw.SetFont(ff);
+if better_grenades:GetValue() then
+for indexF,valueF in pairs(entities.FindByClass("CInferno")) do
+local found = false;
+for indexT,valueT in pairs(grenades) do
+if valueT[1] == valueF:GetIndex() then
+x, y = client_WorldToScreen(valueF:GetAbsOrigin())
+local mollysize = 25;
+if x ~= nil and y ~= nil then
+draw_Color(0, 0, 0, 255); draw.RoundedRectFill( x - mollysize, y, x + mollysize, y + 4 ); draw_Color(227, 227, 227, 255);
+local math = (((globals.TickCount() - valueT[2]) * ((-1) - 1))/ ( (valueT[2] + 7 / globals.TickInterval()) - valueT[2])) + 1
+draw.RoundedRectFill(x - mollysize, y, x + mollysize * math, y + 4); draw_Color(255, 255, 255, 255); draw.RoundedRect(x - mollysize, y, x + mollysize, y + 4) 
+local w,h = draw.GetTextSize( "MOLLY" ) 
+draw_Text(x - w/2, y - h * 1.25 , "MOLLY"); draw_TextShadow(x - w/2, y - h * 1.25 , "MOLLY"); end found = true; break; end end
+if found == false and globals.TickCount() > updatetick then
+local gMatrix = {valueF:GetIndex(), globals.TickCount()}; table.insert(grenades, gMatrix); end end end end
+client.AllowListener("inferno_expire"); client.AllowListener("inferno_extinguish"); client.AllowListener("molotov_detonate"); client.AllowListener("hegrenade_detonate"); client.AllowListener("flashbang_detonate"); 
+callbacks.Register("Draw", "DrawingHookG", DrawingHook); 
+callbacks.Register("DrawESP", "ESPHookG", ESPHook);
+callbacks.Register("FireGameEvent", "EventHookG", EventHook); 
+
+------------------------- Hit Log
+function HitGroup(i_hitgroup) if i_hitgroup == nil then return; elseif i_hitgroup == 0 then return "body"; elseif i_hitgroup == 1 then return "head"; elseif i_hitgroup == 2 then return "chest"; elseif i_hitgroup == 3 then return "stomach"; elseif i_hitgroup == 4 then return "left arm"; elseif i_hitgroup == 5 then return "right arm";  elseif i_hitgroup == 6 then return "left leg"; elseif i_hitgroup == 7 then return "right leg"; elseif i_hitgroup == 10 then return "body"; end end
+local draw_hitsay = {};
+function ChatLogger(Event)
+if HitLog:GetValue() then
+if Event:GetName() == nil then return;
+elseif (Event:GetName() == 'player_hurt') then
+local ME = client.GetLocalPlayerIndex();
+local uid = Event:GetInt('userid');
+local i_attacker = Event:GetInt('attacker');
+local i_dmg = Event:GetString('dmg_health');
+local i_health = Event:GetString('health');
+local i_hitgroup = Event:GetInt('hitgroup');
+local ind_Attacker = PlayerIndexByUserID(i_attacker);
+local N_Attacker = client.GetPlayerNameByUserID(i_attacker);
+local ind_Victim = PlayerIndexByUserID(uid);
+local n_Victim = client.GetPlayerNameByUserID(uid);
+hitPlayerName = ""; hitSpot = ""; hitDmg = ""; hitHealthRemaining = "";
+hitPlayerName = n_Victim; hitSpot = i_hitgroup; hitDmg = i_dmg; hitHealthRemaining = i_health;
+response = string.format("Hit %s in the %s for %s damage (%s health remaining)\n", hitPlayerName, HitGroup(hitSpot), hitDmg, hitHealthRemaining);
+if ( ind_Attacker == ME and ind_Victim ~= ME ) then print(response); 
+table.insert(draw_hitsay, {globals.RealTime(), response}); end end end end
+local On_Screen_Time, pixels_between_each_line, ScreenX, ScreenY = 10, 10, 15, 22
+function hitlog()
+local ff = draw.CreateFont("Tahoma");
+if HitLog:GetValue() then local things_on_screen = 0;
+for k, l in pairs(draw_hitsay) do
+if globals.RealTime() > l[1] + On_Screen_Time then table.remove(draw_hitsay, k); else
+draw_Color(255,255,255,255); draw.SetFont(ff); draw_Text(ScreenX, things_on_screen * pixels_between_each_line + ScreenY, l[2]); things_on_screen = things_on_screen + 1; end end end end
+client.AllowListener('player_hurt'); 
+callbacks.Register('Draw', 'drawing your hits', hitlog); 
+callbacks.Register('FireGameEvent', 'ChatLogger', ChatLogger);  
+ 
+-------------------- Auto Buy
+function showmen() if AB_Show:GetValue() then show = true else show = false; end end 
+function shows() if show == true then AB_W:SetActive(1);  elseif show == false then AB_W:SetActive(0); end end
+function buy(Event)
+if Event:GetName() == nil then return;
+elseif Event:GetName() == "round_prestart" and AB_Mode:GetValue() == 0 then buy = true;
+elseif Event:GetName() == "player_spawn" and AB_Mode:GetValue() == 1 then if PlayerIndexByUserID(Event:GetInt('userid')) == client.GetLocalPlayerIndex()then buy = true; end end
+if entities.GetLocalPlayer() ~= nil then money = entities.GetLocalPlayer():GetProp("m_iAccount"); end
+if AB_E:GetValue() then
+if buy == true then
+	if (SecondaryWeapons:GetValue() == 0) then
+		elseif (SecondaryWeapons:GetValue() == 1) then client_exec("buy elite", true);
+		elseif (SecondaryWeapons:GetValue() == 2) then client_exec("buy p250", true);
+		elseif (SecondaryWeapons:GetValue() == 3) then client_exec("buy tec9", true);
+		elseif (SecondaryWeapons:GetValue() == 4) then client_exec("buy deagle", true); end
+	if money > 199 and AB_Mode:GetValue() == 0 or money ~= 1 and AB_Mode:GetValue() == 1 then
+		if Zeus:GetValue() then client_exec("buy Taser", true); end end	
+	if money > 2200 and AB_Mode:GetValue() == 0 then PWb = true elseif (money ~= 1) and AB_Mode:GetValue() == 1 then PWb = true end
+if PWb == true then
+	if (PrimaryWeapons:GetValue() == 0) then
+		elseif (PrimaryWeapons:GetValue() == 1) then client_exec("buy ak47", true);
+		elseif (PrimaryWeapons:GetValue() == 2) then client_exec("buy ssg08", true);
+		elseif (PrimaryWeapons:GetValue() == 3) then client_exec("buy awp", true);
+		elseif (PrimaryWeapons:GetValue() == 4) then client_exec("buy scar20", true); end
+	if Nades:GetValue() then client_exec("buy hegrenade; buy incgrenade; buy molotov; buy smokegrenade; buy flashbang", true); end
+	if Armor:GetValue() then client_exec("buy vest; buy vesthelm", true); end
+	if Defuser:GetValue() then client_exec("buy defuser", true); end
+buy = false; PWb = false; end end end end
+client.AllowListener('player_spawn'); client.AllowListener("round_prestart"); 
+callbacks.Register("Draw", "asd", showmen); callbacks.Register("Draw", "shows", shows); 
+callbacks.Register("FireGameEvent", "buy", buy);  
+
+-------------------- View Model Extender
+function VM_E()
+if ViewModelShown:GetValue() then VM_Window:SetActive(1); else VM_Window:SetActive(0); end
+client_SetConVar("viewmodel_offset_x", xS:GetValue(), true); 
+client_SetConVar("viewmodel_offset_y", yS:GetValue(), true); 
+client_SetConVar("viewmodel_offset_z", zS:GetValue(), true); 
+client_SetConVar("viewmodel_fov", vfov:GetValue(), true); end
+callbacks.Register("Draw", "sets", VM_E);
+
+-------------------- Scoped Fov Fix
+function scopefov()
+local view_fov = gui.GetValue("vis_view_fov"); local view_model_fov = gui.GetValue("vis_view_model_fov");
+if view_fov ~= 0 then fov_value = gui.GetValue("vis_view_fov"); end if view_model_fov ~= 0 then vm_fov_value = gui.GetValue("vis_view_model_fov"); end
+if s_fovfix:GetValue() then 
+if entities.GetLocalPlayer() ~= nil then
+if entities.GetLocalPlayer():GetProp("m_bIsScoped") == 1 or entities.GetLocalPlayer():GetProp("m_bIsScoped") == 257 then
+	gui.SetValue("vis_view_fov", 0); gui.SetValue("vis_view_model_fov", 0); 
+elseif view_fov == 0 then
+	gui.SetValue("vis_view_fov", fov_value); gui.SetValue("vis_view_model_fov", vm_fov_value); end end end end
+callbacks.Register("Draw", "scopefov", scopefov);
+
+-------------------- Sniper Crosshair
+function ifCrosshair()
+local ff = draw.CreateFont("Tahoma");
+if entities.GetLocalPlayer() ~= nil then
+local Weapon = entities.GetLocalPlayer():GetPropEntity("m_hActiveWeapon");
+if Weapon == nil then return; end
+local cWep = Weapon:GetClass();
+if cWep == "CWeaponAWP" or cWep == "CWeaponSSG08" or cWep == "CWeaponSCAR20" or cWep == "CWeaponG3SG1" then drawCrosshair = true; 
+elseif cWep ~= "CWeaponawp" and cWep ~= "CWeaponSSG08" and cWep ~= "CWeaponSCAR20" and cWep ~= "CWeaponG3SG1" then drawCrosshair = false; end end
+if not OwnCrosshair:GetValue() then client_SetConVar("weapon_debug_spread_show", 0, true); end
+local screenCenterX, screenY = draw_GetScreenSize(); local scX, scY = screenCenterX / 2, screenY / 2;
+if drawCrosshair == true and s_cross:GetValue() and not OwnCrosshair:GetValue() then gui.SetValue('esp_crosshair', false); draw.SetFont(ff);
+draw_Color(255,255,255,255); draw_Line(scX, scY - 8, scX, scY + 8);  --[[ line down ]] draw_Line(scX - 8, scY, scX + 8, scY); --line across
+elseif drawCrosshair == true and OwnCrosshair:GetValue() and not s_cross:GetValue() then  client_SetConVar("weapon_debug_spread_show", 3, true); end end
+callbacks.Register("Draw", "sniper crosshairs", ifCrosshair);
+
+-------------------- Bomb Timer & defuse timer
+local function mathfix() local screenX, screenY = draw_GetScreenSize() screenY3 = screenY/2; end callbacks.Register("Draw", "fix", mathfix);
+colorchange, drawBar, drawDefuse, plantedTime, plantedTime2, fill, fill2, fill3 = 10, false, false, 0, 0, 0, screenY3, 0
+function bomb(event)
+if event:GetName() == "bomb_planted" then plantedTime = globals.CurTime(); drawBar = true; end
+if event:GetName() == "bomb_begindefuse" then plantedTime2 = globals.CurTime(); drawDefuse = true; end
+if event:GetName() == "bomb_abortdefuse" then drawDefuse = false; fill2 = screenY3; fill3 = 0; end
+if event:GetName() == "round_end" then drawBar = false; drawDefuse = false; fill = 0; fill2 = screenY3; fill3 = 0; end end
+function drawProgress()
+if BombTimer:GetValue() then
+if drawBar == true then
+local ff = draw.CreateFont("Tahoma");
+local screenX, screenY = draw_GetScreenSize()
+draw_Color(255,255,255,255)
+local ToExplode = entities.FindByClass("CPlantedC4")
+c4time = math.floor(ToExplode[1]:GetProp("m_flTimerLength"))
+if math.floor((plantedTime - globals.CurTime()) + c4time) > -1  then
+local godownby = (screenY / c4time) / get_abs_fps() 
+if math.floor((plantedTime - globals.CurTime()) + c4time) <= colorchange then draw_Color(255,0,0,255) else draw_Color(0,255,0,255) end 
+draw.FilledRect(0, fill, 10, screenY);
+draw.SetFont(ff);
+draw_Color(0,0,0,100); draw.FilledRect(0, 0, 10, screenY); 
+draw_Color(255,255,255,255); draw_Text(13, fill-3, string.format("%.0f", (plantedTime - globals.CurTime()) + c4time));
+fill = fill + godownby; end end
+if drawDefuse == true then
+local screenX, screenY = draw_GetScreenSize()
+draw_Color(255,255,255,255);
+local ToDefuse = entities.FindByClass("CPlantedC4");
+DefuseTime = math.floor(ToDefuse[1]:GetProp("m_flDefuseLength"));
+DefuseT = string.format("%.1f", (plantedTime2 - globals.CurTime()) + DefuseTime);
+if DefuseTime == 10 then local godownby3 = (screenY / DefuseTime) / get_abs_fps(); draw.SetFont(ff);
+draw_Color(0,0,255,255); draw.FilledRect(0, fill3, 10, screenY);
+draw_Color(0,0,0,100); draw.FilledRect(0, 0, 10, screenY);
+draw_Color(255,255,255,255); draw_Text(13, fill3-3, DefuseT); fill3 = fill3 + godownby3;
+elseif DefuseTime == 5 then screenY3 = screenY/2; local godownby2 = (screenY3 / DefuseTime) / get_abs_fps(); draw.SetFont(ff);
+draw_Color(0,0,255,255); draw.FilledRect(0, fill2, 10, screenY);
+draw_Color(0,0,0,100); draw.FilledRect(0, screenY3, 10, screenY);
+draw_Color(255,255,255,255); draw_Text(13, fill2-3, DefuseT);
+fill2 = fill2 + godownby2; end end end end
+
+-------------------- Bomb Damage
+function DrawDamage()
+if Bomb_Damage:GetValue() then
+local fontz = draw.CreateFont("Tahoma", 30); local ff = draw.CreateFont("Tahoma")
+if entities.FindByClass("CPlantedC4")[1] ~= nil then
+local Bomb = entities.FindByClass("CPlantedC4")[1];
+if Bomb:GetProp("m_bBombTicking") and Bomb:GetProp("m_bBombDefused") == 0 and globals.CurTime() < Bomb:GetProp("m_flC4Blow") then
+local ScreenW, ScreenH = draw_GetScreenSize(); local Player = entities.GetLocalPlayer();  HealthToTake = string.format("%.0f", (DamagefromDomb(Bomb, Player))); HealthLeft = string.format("%.1f", (HealthToTake- Player:GetHealth()))
+if Player:IsAlive() and globals.CurTime() < Bomb:GetProp("m_flC4Blow") then
+if (-HealthLeft <= 1.7) then draw.SetFont(fontz); draw_Color(255,0,0,255); draw_Text(25, 0, math.floor(-HealthLeft - 1));
+else draw.SetFont(fontz); draw_Color(0,255,0,255); draw_Text(25, 0, math.floor(-HealthLeft - 1)); 
+end end end end end draw.SetFont(ff); end
+callbacks.Register('Draw', 'DrawDamage', DrawDamage); 
+function DamagefromDomb(Bomb, Player)
+local C4Distance = math.sqrt((select(1,Bomb:GetAbsOrigin()) - select(1,Player:GetAbsOrigin())) ^ 2 + (select(2,Bomb:GetAbsOrigin()) - select(2,Player:GetAbsOrigin())) ^ 2 + (select(3,Bomb:GetAbsOrigin()) - select(3,Player:GetAbsOrigin())) ^ 2);
+local Gauss = (C4Distance - 75.68) / 789.2 
+local flDamage = 450.7 * math.exp(-Gauss * Gauss);
+if Player:GetProp("m_ArmorValue") > 0 then
+local flArmorRatio = 0.5; local flArmorBonus = 0.5;
+if Player:GetProp("m_ArmorValue") > 0 then
+local flNew = flDamage * flArmorRatio;
+local flArmor = (flDamage - flNew) * flArmorBonus;
+if flArmor > Player:GetProp("m_ArmorValue") then
+flArmor = Player:GetProp("m_ArmorValue") * (1 / flArmorBonus); flNew = flDamage - flArmor; end; flDamage = flNew; end end
+return math.max(flDamage, 0); end 
+client.AllowListener('bomb_planted'); client.AllowListener("bomb_defused"); client.AllowListener('round_end'); client.AllowListener('bomb_begindefuse'); client.AllowListener('bomb_abortdefuse');
+callbacks.Register('Draw', 'drawing bomb time', drawProgress); callbacks.Register('Draw', 'drawing bomb defuse time', BombProgress); 
+callbacks.Register('FireGameEvent', 'bomb thing', bomb); 
+
+-------------------- Clear Chat
+local spammedlast  = globals.TickCount()
+function spammer()
+if Clear_Chat:GetValue() then
+if entities.GetLocalPlayer() ~= nil then 
+if globals.TickCount() - spammedlast > Clear_Chat_spd:GetValue() then 
+client.ChatSay("?? ??? ??? ??? ??? ??? ??? ??? ??"); 
+spammedlast = globals.TickCount(); end end end end
+callbacks.Register( "Draw", "spams", spammer);
+ 
+-------------------- Aspect Ratio Changer
+local function gcd(m, n) while m ~= 0 do m, n = math.fmod(n, m), m; end return n; end
+local function set_aspect_ratio(aspect_ratio_multiplier) local screen_width, screen_height = draw_GetScreenSize(); local aspectratio_value = (screen_width*aspect_ratio_multiplier)/screen_height; if aspect_ratio_multiplier == 1 or not aspect_ratio_check:GetValue() then aspectratio_value = 0; end client_SetConVar( "r_aspectratio", tonumber(aspectratio_value), true); end
+local function on_aspect_ratio_changed() local screen_width, screen_height = draw_GetScreenSize(); for i=1, 200 do local i2=i*0.01;    i2 = 2 - i2; local divisor = gcd(screen_width*i2, screen_height); if screen_width*i2/divisor < 100 or i2 == 1 then aspect_ratio_table[i] = screen_width*i2/divisor .. ":" .. screen_height/divisor;  end  end local aspect_ratio = aspect_ratio_reference:GetValue()*0.01; aspect_ratio = 2 - aspect_ratio; set_aspect_ratio(aspect_ratio); end
+callbacks.Register('Draw', "does shit" ,on_aspect_ratio_changed);
+
+-------------------- Esp on Dead
+function ESP_Always_OnDead() 
+if espdead:GetValue() then
+if entities.GetLocalPlayer() == nil then return;
+elseif entities.GetLocalPlayer():IsAlive() == true then
+    gui.SetValue("esp_visibility_enemy", 1);
+    gui.SetValue("esp_enemy_box", 0);
+    gui.SetValue("esp_enemy_weapon", 0);
+    gui.SetValue("esp_enemy_health", 0);
+    gui.SetValue("esp_enemy_glow", 0);
+	gui.SetValue("esp_enemy_skeleton", false);
+	gui.SetValue("esp_enemy_name", false);
+elseif entities.GetLocalPlayer():IsAlive() == false then	
+    gui.SetValue("esp_visibility_enemy", 0);
+    gui.SetValue("esp_enemy_box", 3);
+    gui.SetValue("esp_enemy_weapon", 1);
+    gui.SetValue("esp_enemy_health", 2);
+    gui.SetValue("esp_enemy_glow", 2);
+	gui.SetValue("esp_enemy_skeleton", true);
+	gui.SetValue("esp_enemy_name", true); end end end
+callbacks.Register("Draw", "espalwaysondead", ESP_Always_OnDead);
+
+-------------------- Engine Radar
+function engineradar()
+if ERadar:GetValue() then ERval = 1; else ERval = 0; end
+for o, radar in pairs(entities.FindByClass("CCSPlayer")) do radar:SetProp("m_bSpotted", ERval); end end
+callbacks.Register("Draw", "engine radar", engineradar);
+
+-------------------- Enemy & Team Tracers
+function Tracers()
+if entities.GetLocalPlayer() ~= nil then
+local sX, sY = draw_GetScreenSize();
+local lpTeamNum = entities.GetLocalPlayer():GetProp("m_iTeamNum")
+local players = entities.FindByClass("CCSPlayer");
+for i = 1, #players do
+	local player = players[i];
+	local pX, pY, pZ = client.WorldToScreen(player:GetProp("m_vecOrigin"));
+if tracersEnemy:GetValue() then
+	if player:GetProp("m_iTeamNum") ~= lpTeamNum then
+		if player:IsAlive() then
+			if pX ~= nil and pY ~= nil then
+				draw_Color(255, 0, 0, 255); draw_Line(sX/2, sY, pX, pY); end end end end
+if tracersTeam:GetValue() then
+	if player:GetProp("m_iTeamNum") == lpTeamNum then
+		if player:IsAlive() then
+			if pX ~= nil and pY ~= nil then
+				draw_Color(0, 0, 255, 255); draw_Line(sX/2, sY, pX, pY); end end end end	
+end end end
+callbacks.Register("Draw", "I'm already tracer", Tracers);
+
+-------------------- Enemy & Team & Other Distance + visible help
+function Distance(builder)
+local ent = builder:GetEntity();
+local ppX, ppY, ppZ = ent:GetProp("m_vecOrigin");
+local lX, lY, lZ = entities.GetLocalPlayer():GetProp("m_vecOrigin");
+local dist = distance2D(ppX, ppY, lX, lY);
+if enemy_distance:GetValue() and ent:IsAlive() and ent:IsPlayer() and ent:GetTeamNumber() ~= entities.GetLocalPlayer():GetTeamNumber() then builder:Color(255, 255, 255, 255); builder:AddTextBottom("FT: "..dist); end
+if team_distance:GetValue() and ent:IsAlive() and ent:IsPlayer() and ent:GetTeamNumber() == entities.GetLocalPlayer():GetTeamNumber() then builder:Color(255, 255, 255, 255); builder:AddTextBottom("FT: "..dist); end
+if other_distance:GetValue() and not ent:IsPlayer() then builder:Color(255, 255, 255, 255); builder:AddTextBottom("FT: "..dist); end
+if enemy_visiblehelp:GetValue() and ent:IsAlive() and ent:IsPlayer() and ent:GetTeamNumber() ~= entities.GetLocalPlayer():GetTeamNumber() then builder:Color(255, 255, 255, 255); builder:AddTextTop("VISIBLE"); end end
+callbacks.Register("DrawESP", "distance", Distance)
+
+-------------------- full bright
+function full_bright() if fBright:GetValue() then client_SetConVar("mat_fullbright", 1, true); else client_SetConVar("mat_fullbright", 0, true); end end
+callbacks.Register('Draw', "Full brightness" ,full_bright);
+
+-------------------- Knife on Left Hand
+function on_knife_righthand()
+if K_O_L_H:GetValue() then
+if entities.GetLocalPlayer() ~= nil then
+if entities.GetLocalPlayer():GetHealth() == nil or entities.GetLocalPlayer():GetHealth() <= 0 then client_exec("cl_righthand 1", true); return; end
+local wep = entities.GetLocalPlayer():GetPropEntity("m_hActiveWeapon");
+if wep == nil then return; end
+local cwep = wep:GetClass();
+if cwep == "CKnife" then client_exec("cl_righthand 0", true); else client_exec("cl_righthand 1", true); end end end end
+callbacks.Register("Draw", "a", on_knife_righthand); 
+
+-------------------- 3rd person if you are dead
+function ifyoudead() if thirdpersonondead:GetValue() then gui.SetValue("vis_thirdperson_mode", 1); if entities.GetLocalPlayer():GetHealth() <= 0 then gui.SetValue("vis_thirdperson_dist", 150); else gui.SetValue("vis_thirdperson_dist", 0); end  return; end end 
+callbacks.Register("Draw", "d", ifyoudead);
+
+local VIS_MAIN_REF = gui.Reference( "VISUALS", "Main" );
+
+local DisablePostProcessing = gui.Checkbox( VIS_MAIN_REF, "lua_disablepostprocess", "Disable Post Processing", 0 );
+
+local function PostProcessing()
+
+	if DisablePostProcessing:GetValue() then
+		client.SetConVar( "mat_postprocess_enable", 0, true );
+	else
+		client.SetConVar( "mat_postprocess_enable", 1, true );
+	end
+
+end
+
+callbacks.Register( "Draw", "Disable Post Processing", PostProcessing )
